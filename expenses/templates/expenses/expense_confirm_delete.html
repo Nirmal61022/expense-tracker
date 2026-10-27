@@ -1,0 +1,48 @@
+{% extends 'expenses/base.html' %}
+
+{% block title %}Delete Expense - ExpenseFlow{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto my-8">
+    <div class="bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-200/80 p-8 text-center">
+        <div class="w-14 h-14 rounded-2xl bg-rose-50 border border-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-4 text-2xl shadow-sm">
+            <i class="fa-solid fa-trash-can"></i>
+        </div>
+        <h1 class="text-xl font-bold text-slate-900">Confirm Deletion</h1>
+        <p class="text-xs sm:text-sm text-slate-500 mt-2">
+            Are you sure you want to permanently delete this expense?
+        </p>
+
+        <div class="my-6 p-4 rounded-xl bg-slate-50 border border-slate-200 text-left space-y-1.5 text-xs">
+            <div class="flex justify-between">
+                <span class="text-slate-500">Merchant:</span>
+                <span class="font-bold text-slate-800">{{ expense.merchant }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-slate-500">Amount:</span>
+                <span class="font-bold text-slate-800">${{ expense.amount|floatformat:2 }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-slate-500">Category:</span>
+                <span class="font-bold text-slate-800">{{ expense.category }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-slate-500">Date:</span>
+                <span class="font-bold text-slate-800">{{ expense.date|date:"M d, Y" }}</span>
+            </div>
+        </div>
+
+        <form method="post" class="flex items-center gap-3">
+            {% csrf_token %}
+            <a href="{% url 'expenses:expense_list' %}"
+               class="w-1/2 py-2.5 px-4 rounded-xl border border-slate-300 text-slate-700 text-xs font-semibold hover:bg-slate-50 transition">
+                Cancel
+            </a>
+            <button type="submit"
+                    class="w-1/2 py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold shadow-lg shadow-rose-600/30 transition">
+                Delete Expense
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

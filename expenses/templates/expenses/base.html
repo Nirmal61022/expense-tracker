@@ -1,0 +1,254 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ExpenseFlow - Smart Personal Expense Tracker{% endblock %}</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            800: '#3730a3',
+                            900: '#312e81',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="{% static 'expenses/css/styles.css' %}">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="h-full flex flex-col text-slate-800 antialiased">
+
+{% if user.is_authenticated %}
+<div class="min-h-full flex flex-col lg:flex-row">
+    <!-- Desktop Sidebar -->
+    <aside class="hidden lg:flex lg:flex-col lg:w-72 bg-slate-900 text-white shrink-0 shadow-xl z-20">
+        <!-- Logo & Brand -->
+        <div class="h-20 flex items-center px-6 border-b border-slate-800 gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-emerald-400 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-indigo-500/30">
+                <i class="fa-solid fa-wallet"></i>
+            </div>
+            <div>
+                <span class="text-xl font-bold tracking-tight text-white">Expense<span class="text-emerald-400">Flow</span></span>
+                <span class="block text-xs text-slate-400 font-medium tracking-wide uppercase">Financial Studio</span>
+            </div>
+        </div>
+
+        <!-- Navigation Links -->
+        <div class="flex-1 flex flex-col justify-between p-4 overflow-y-auto">
+            <nav class="space-y-1.5">
+                <a href="{% url 'expenses:dashboard' %}" class="flex items-center gap-3.5 px-4 py-3 rounded-xl font-medium text-sm transition-all duration-200 {% if request.resolver_match.url_name == 'dashboard' %}bg-indigo-600 text-white shadow-lg shadow-indigo-600/30{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white{% endif %}">
+                    <i class="fa-solid fa-chart-pie w-5 text-center text-base"></i>
+                    <span>Dashboard</span>
+                </a>
+
+                <a href="{% url 'expenses:expense_list' %}" class="flex items-center gap-3.5 px-4 py-3 rounded-xl font-medium text-sm transition-all duration-200 {% if request.resolver_match.url_name == 'expense_list' %}bg-indigo-600 text-white shadow-lg shadow-indigo-600/30{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white{% endif %}">
+                    <i class="fa-solid fa-receipt w-5 text-center text-base"></i>
+                    <span>All Expenses</span>
+                </a>
+
+                <a href="{% url 'expenses:monthly_report' %}" class="flex items-center gap-3.5 px-4 py-3 rounded-xl font-medium text-sm transition-all duration-200 {% if request.resolver_match.url_name == 'monthly_report' %}bg-indigo-600 text-white shadow-lg shadow-indigo-600/30{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white{% endif %}">
+                    <i class="fa-solid fa-chart-line w-5 text-center text-base"></i>
+                    <span>Monthly Reports</span>
+                </a>
+
+                <a href="{% url 'expenses:budget_manage' %}" class="flex items-center gap-3.5 px-4 py-3 rounded-xl font-medium text-sm transition-all duration-200 {% if request.resolver_match.url_name == 'budget_manage' %}bg-indigo-600 text-white shadow-lg shadow-indigo-600/30{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white{% endif %}">
+                    <i class="fa-solid fa-bullseye w-5 text-center text-base"></i>
+                    <span>Budget Planner</span>
+                </a>
+            </nav>
+
+            <!-- Bottom Action & User Box -->
+            <div class="pt-6 border-t border-slate-800 space-y-4">
+                <a href="{% url 'expenses:expense_create' %}" class="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl font-semibold text-sm bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white shadow-lg shadow-emerald-500/25 transition-all transform hover:-translate-y-0.5">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>Add Expense</span>
+                </a>
+
+                <div class="flex items-center justify-between p-3 rounded-xl bg-slate-800/70 border border-slate-700/50">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-9 h-9 rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center font-bold text-sm shrink-0">
+                            {{ user.username|first|upper }}
+                        </div>
+                        <div class="truncate">
+                            <p class="text-sm font-semibold text-white truncate">{{ user.username }}</p>
+                            <p class="text-xs text-slate-400 truncate">{{ user.email|default:"Active User" }}</p>
+                        </div>
+                    </div>
+                    <form method="post" action="{% url 'expenses:logout' %}" class="inline">
+                        {% csrf_token %}
+                        <button type="submit" title="Logout" class="text-slate-400 hover:text-rose-400 p-1.5 transition">
+                            <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Mobile Header -->
+    <header class="lg:hidden bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-30 px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-indigo-500 to-emerald-400 flex items-center justify-center text-white font-bold text-sm">
+                <i class="fa-solid fa-wallet"></i>
+            </div>
+            <span class="text-lg font-bold">Expense<span class="text-emerald-400">Flow</span></span>
+        </div>
+        <div class="flex items-center gap-2">
+            <a href="{% url 'expenses:expense_create' %}" class="bg-emerald-500 text-white p-2 rounded-lg text-sm">
+                <i class="fa-solid fa-plus"></i>
+            </a>
+            <button id="mobileMenuBtn" class="text-slate-300 hover:text-white p-2 rounded-lg focus:outline-none">
+                <i class="fa-solid fa-bars text-xl"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Mobile Drawer Navigation -->
+    <div id="mobileMenu" class="hidden lg:hidden bg-slate-900 text-white border-b border-slate-800 px-4 py-4 space-y-2">
+        <a href="{% url 'expenses:dashboard' %}" class="block px-3 py-2.5 rounded-lg text-sm font-medium {% if request.resolver_match.url_name == 'dashboard' %}bg-indigo-600 text-white{% else %}text-slate-300 hover:bg-slate-800{% endif %}">
+            <i class="fa-solid fa-chart-pie mr-2"></i> Dashboard
+        </a>
+        <a href="{% url 'expenses:expense_list' %}" class="block px-3 py-2.5 rounded-lg text-sm font-medium {% if request.resolver_match.url_name == 'expense_list' %}bg-indigo-600 text-white{% else %}text-slate-300 hover:bg-slate-800{% endif %}">
+            <i class="fa-solid fa-receipt mr-2"></i> All Expenses
+        </a>
+        <a href="{% url 'expenses:monthly_report' %}" class="block px-3 py-2.5 rounded-lg text-sm font-medium {% if request.resolver_match.url_name == 'monthly_report' %}bg-indigo-600 text-white{% else %}text-slate-300 hover:bg-slate-800{% endif %}">
+            <i class="fa-solid fa-chart-line mr-2"></i> Monthly Reports
+        </a>
+        <a href="{% url 'expenses:budget_manage' %}" class="block px-3 py-2.5 rounded-lg text-sm font-medium {% if request.resolver_match.url_name == 'budget_manage' %}bg-indigo-600 text-white{% else %}text-slate-300 hover:bg-slate-800{% endif %}">
+            <i class="fa-solid fa-bullseye mr-2"></i> Budget Planner
+        </a>
+        <div class="pt-3 border-t border-slate-800 flex items-center justify-between">
+            <div class="text-sm">
+                <span class="font-medium text-white">{{ user.username }}</span>
+            </div>
+            <form method="post" action="{% url 'expenses:logout' %}" class="inline">
+                {% csrf_token %}
+                <button type="submit" class="text-xs text-rose-400 hover:text-rose-300 font-semibold py-1 px-2 rounded bg-rose-500/10 border border-rose-500/20">
+                    Log out
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 flex flex-col min-w-0 overflow-y-auto">
+        <!-- Top notification banner / alerts -->
+        {% if messages %}
+        <div class="p-4 sm:px-8 max-w-7xl w-full mx-auto space-y-3">
+            {% for message in messages %}
+            <div class="flex items-center justify-between px-4 py-3.5 rounded-xl border shadow-sm text-sm font-medium {% if message.tags == 'success' %}bg-emerald-50 text-emerald-800 border-emerald-200{% elif message.tags == 'error' %}bg-rose-50 text-rose-800 border-rose-200{% elif message.tags == 'warning' %}bg-amber-50 text-amber-800 border-amber-200{% else %}bg-indigo-50 text-indigo-800 border-indigo-200{% endif %}" role="alert">
+                <div class="flex items-center gap-3">
+                    {% if message.tags == 'success' %}
+                        <i class="fa-solid fa-circle-check text-emerald-500 text-lg"></i>
+                    {% elif message.tags == 'error' %}
+                        <i class="fa-solid fa-circle-exclamation text-rose-500 text-lg"></i>
+                    {% elif message.tags == 'warning' %}
+                        <i class="fa-solid fa-triangle-exclamation text-amber-500 text-lg"></i>
+                    {% else %}
+                        <i class="fa-solid fa-circle-info text-indigo-500 text-lg"></i>
+                    {% endif %}
+                    <span>{{ message }}</span>
+                </div>
+                <button onclick="this.parentElement.remove()" class="text-slate-400 hover:text-slate-700 transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Child Page Body -->
+        <div class="p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto flex-1">
+            {% block content %}{% endblock %}
+        </div>
+
+        <!-- Footer -->
+        <footer class="mt-auto py-5 px-6 border-t border-slate-200/80 bg-white/70 text-center text-xs text-slate-500">
+            <p>ExpenseFlow &bull; Secure Personal Finance & Expense Tracker &bull; Built with Django & PostgreSQL</p>
+        </footer>
+    </main>
+</div>
+{% else %}
+<!-- Unauthenticated Public Layout -->
+<div class="min-h-full flex flex-col justify-between">
+    <nav class="bg-white border-b border-slate-200 px-6 py-4">
+        <div class="max-w-6xl mx-auto flex items-center justify-between">
+            <a href="{% url 'expenses:login' %}" class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-500 to-emerald-400 flex items-center justify-center text-white font-black text-lg shadow-md shadow-indigo-500/20">
+                    <i class="fa-solid fa-wallet"></i>
+                </div>
+                <span class="text-xl font-bold tracking-tight text-slate-900">Expense<span class="text-indigo-600">Flow</span></span>
+            </a>
+            <div class="flex items-center gap-3">
+                <a href="{% url 'expenses:login' %}" class="text-sm font-semibold text-slate-600 hover:text-slate-900 px-3 py-2">Sign in</a>
+                <a href="{% url 'expenses:register' %}" class="text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg shadow-sm transition">Create Account</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="flex-1 flex items-center justify-center p-4">
+        {% if messages %}
+        <div class="max-w-md w-full mb-4 space-y-2">
+            {% for message in messages %}
+            <div class="p-4 rounded-xl text-sm font-medium {% if message.tags == 'error' %}bg-rose-50 text-rose-800 border border-rose-200{% else %}bg-indigo-50 text-indigo-800 border border-indigo-200{% endif %}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% block auth_content %}{% endblock %}
+    </div>
+
+    <footer class="py-4 text-center text-xs text-slate-400 border-t border-slate-200 bg-white">
+        &copy; ExpenseFlow &bull; Smart, Modern Personal Expense Tracking
+    </footer>
+</div>
+{% endif %}
+
+<script>
+    // Mobile navigation toggle
+    const menuBtn = document.getElementById('mobileMenuBtn');
+    const menu = document.getElementById('mobileMenu');
+    if (menuBtn && menu) {
+        menuBtn.addEventListener('click', () => {
+            menu.classList.toggle('hidden');
+        });
+    }
+</script>
+<script src="{% static 'expenses/js/main.js' %}"></script>
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,153 @@
+{% extends 'expenses/base.html' %}
+
+{% block title %}Budget Planner - ExpenseFlow{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Monthly Budget Planner</h1>
+            <p class="text-sm text-slate-500 mt-1">Set monthly financial spending limits and keep your expenditure on track.</p>
+        </div>
+    </div>
+
+    <!-- Create or Update Budget Card -->
+    <div class="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200/80 shadow-sm max-w-2xl">
+        <h2 class="text-lg font-bold text-slate-900 mb-1 flex items-center gap-2">
+            <i class="fa-solid fa-bullseye text-indigo-600"></i>
+            Set or Update Monthly Budget
+        </h2>
+        <p class="text-xs text-slate-500 mb-6">If a budget already exists for the chosen month and year, submitting will update its limit.</p>
+
+        <form method="post" action="{% url 'expenses:budget_manage' %}" class="space-y-4">
+            {% csrf_token %}
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">Year</label>
+                    {{ form.year }}
+                    {% if form.year.errors %}
+                    <p class="text-xs text-rose-600 mt-1">{{ form.year.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">Month</label>
+                    {{ form.month }}
+                    {% if form.month.errors %}
+                    <p class="text-xs text-rose-600 mt-1">{{ form.month.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">Limit ($)</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 font-bold">$</span>
+                        <input type="number" step="0.01" min="0.01" name="amount" id="{{ form.amount.id_for_label }}"
+                               value="{{ form.amount.value|default:'' }}" required placeholder="0.00"
+                               class="w-full pl-7 pr-3 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none transition">
+                    </div>
+                    {% if form.amount.errors %}
+                    <p class="text-xs text-rose-600 mt-1">{{ form.amount.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="pt-3 flex justify-end">
+                <button type="submit" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/25 transition">
+                    Save Budget Limit
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Active & Past Budgets -->
+    <div class="space-y-4">
+        <h2 class="text-lg font-bold text-slate-900">Your Budgets & Spending Status</h2>
+
+        {% if budget_cards %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {% for b in budget_cards %}
+            <div class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm flex flex-col justify-between relative group hover:shadow-md transition">
+                <div>
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-9 h-9 rounded-xl {% if b.is_over %}bg-rose-100 text-rose-600{% elif b.is_warning %}bg-amber-100 text-amber-600{% else %}bg-emerald-100 text-emerald-600{% endif %} flex items-center justify-center font-bold text-sm">
+                                <i class="fa-solid fa-calendar-check"></i>
+                            </div>
+                            <span class="font-bold text-slate-900">{{ b.obj.year }} - Month {{ b.obj.month|stringformat:"02d" }}</span>
+                        </div>
+
+                        <!-- Status Badge -->
+                        <span class="text-[11px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider
+                            {% if b.is_over %}bg-rose-100 text-rose-700 border border-rose-200
+                            {% elif b.is_warning %}bg-amber-100 text-amber-700 border border-amber-200
+                            {% else %}bg-emerald-100 text-emerald-700 border border-emerald-200{% endif %}">
+                            {% if b.is_over %}Exceeded{% elif b.is_warning %}Warning (80%+){% else %}On Track{% endif %}
+                        </span>
+                    </div>
+
+                    <div class="space-y-2 mb-4">
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="text-slate-500 font-medium">Budget Limit:</span>
+                            <span class="font-extrabold text-slate-800">${{ b.obj.amount|floatformat:2 }}</span>
+                        </div>
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="text-slate-500 font-medium">Actual Spent:</span>
+                            <span class="font-extrabold text-slate-800">${{ b.spent|floatformat:2 }}</span>
+                        </div>
+                        <div class="flex items-center justify-between text-xs pt-1 border-t border-slate-100">
+                            <span class="text-slate-500 font-medium">Remaining:</span>
+                            <span class="font-bold {% if b.remaining < 0 %}text-rose-600{% else %}text-emerald-600{% endif %}">
+                                {% if b.remaining >= 0 %}
+                                    ${{ b.remaining|floatformat:2 }}
+                                {% else %}
+                                    -${{ b.remaining|floatformat:2|stringformat:"s"|slice:"1:" }}
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div class="space-y-1 mb-6">
+                        <div class="flex items-center justify-between text-[11px] text-slate-500">
+                            <span>{{ b.raw_percentage }}% utilized</span>
+                        </div>
+                        <div class="w-full h-2.5 rounded-full bg-slate-100 overflow-hidden">
+                            <div class="h-full rounded-full transition-all duration-300 {% if b.is_over %}bg-rose-500{% elif b.is_warning %}bg-amber-500{% else %}bg-emerald-500{% endif %}"
+                                 style="width: {{ b.percentage }}%;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer & Delete -->
+                <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <a href="{% url 'expenses:monthly_report' %}?year={{ b.obj.year }}&month={{ b.obj.month }}"
+                       class="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1">
+                        <span>View Monthly Report</span>
+                        <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                    </a>
+
+                    <form method="post" action="{% url 'expenses:budget_delete' b.obj.pk %}" onsubmit="return confirm('Delete budget for {{ b.obj.year }}/{{ b.obj.month }}?');">
+                        {% csrf_token %}
+                        <button type="submit" title="Delete Budget" class="text-slate-400 hover:text-rose-600 p-1 transition">
+                            <i class="fa-solid fa-trash-can text-xs"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="p-12 text-center bg-white rounded-2xl border border-slate-200/80">
+            <div class="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-500 flex items-center justify-center mx-auto mb-4 text-2xl">
+                <i class="fa-solid fa-bullseye"></i>
+            </div>
+            <h3 class="text-base font-bold text-slate-800">No budgets created yet</h3>
+            <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">Use the form above to set your first monthly budget limit and stay ahead of your expenses.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
