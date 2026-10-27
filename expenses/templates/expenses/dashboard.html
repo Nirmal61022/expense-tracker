@@ -201,6 +201,62 @@
         </div>
     </div>
 
+    <!-- Third-Party API Widget: Live Currency Exchange & Travel Budget Rates (with Timeout & Fallback) -->
+    <div class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5 border-b border-slate-100 pb-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-500 text-white flex items-center justify-center text-lg shadow-sm">
+                    <i class="fa-solid fa-globe"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-base font-bold text-slate-900">Live Currency Exchange Rates</h2>
+                        <span id="rateSourceBadge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">
+                            Loading API...
+                        </span>
+                    </div>
+                    <p class="text-xs text-slate-500">Third-party API integration with strict 2.0s timeout & automatic offline fallback</p>
+                </div>
+            </div>
+
+            <!-- Quick Currency Converter Input -->
+            <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-slate-500">Convert $</span>
+                <input type="number" id="convertAmountInput" value="100" min="1" step="10" oninput="calculateExchangeConversions()"
+                    class="w-24 px-3 py-1.5 text-xs font-bold rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800">
+                <span class="text-xs font-semibold text-slate-400">USD</span>
+            </div>
+        </div>
+
+        <!-- Exchange Rates Grid -->
+        <div id="ratesContainer" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/80 animate-pulse text-center">
+                <span class="text-xs font-bold text-slate-400">EUR</span>
+                <p class="text-sm font-extrabold text-slate-700 mt-1">...</p>
+            </div>
+            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/80 animate-pulse text-center">
+                <span class="text-xs font-bold text-slate-400">GBP</span>
+                <p class="text-sm font-extrabold text-slate-700 mt-1">...</p>
+            </div>
+            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/80 animate-pulse text-center">
+                <span class="text-xs font-bold text-slate-400">INR</span>
+                <p class="text-sm font-extrabold text-slate-700 mt-1">...</p>
+            </div>
+            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/80 animate-pulse text-center">
+                <span class="text-xs font-bold text-slate-400">CAD</span>
+                <p class="text-sm font-extrabold text-slate-700 mt-1">...</p>
+            </div>
+            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/80 animate-pulse text-center">
+                <span class="text-xs font-bold text-slate-400">AUD</span>
+                <p class="text-sm font-extrabold text-slate-700 mt-1">...</p>
+            </div>
+            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/80 animate-pulse text-center">
+                <span class="text-xs font-bold text-slate-400">JPY</span>
+                <p class="text-sm font-extrabold text-slate-700 mt-1">...</p>
+            </div>
+        </div>
+    </div>
+
     <!-- Recent Transactions Section -->
     <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
         <div class="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -393,5 +449,70 @@
         document.getElementById('trendChart').classList.add('hidden');
         document.getElementById('noTrendData').classList.remove('hidden');
     }
+
+    // Third-Party Currency Rates Fetcher with Fallback & Timeout display
+    let globalExchangeRates = {};
+
+    async function loadCurrencyRates() {
+        const badge = document.getElementById('rateSourceBadge');
+        const container = document.getElementById('ratesContainer');
+
+        try {
+            const res = await fetch('/api/exchange-rates/?base=USD');
+            const data = await res.json();
+            globalExchangeRates = data.rates || {};
+
+            if (data.is_fallback) {
+                badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800';
+                badge.innerHTML = '<i class="fa-solid fa-clock-rotate-left mr-1"></i>Fallback Cached Rates';
+            } else {
+                badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800';
+                badge.innerHTML = '<i class="fa-solid fa-signal mr-1"></i>Live: ' + data.source;
+            }
+
+            calculateExchangeConversions();
+        } catch (e) {
+            badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800';
+            badge.innerText = 'Offline Fallback';
+        }
+    }
+
+    function calculateExchangeConversions() {
+        const amount = parseFloat(document.getElementById('convertAmountInput').value) || 1;
+        const container = document.getElementById('ratesContainer');
+        const targetCurrencies = [
+            { code: 'EUR', symbol: '€', name: 'Euro' },
+            { code: 'GBP', symbol: '£', name: 'British Pound' },
+            { code: 'INR', symbol: '₹', name: 'Indian Rupee' },
+            { code: 'CAD', symbol: 'CA$', name: 'Canadian Dollar' },
+            { code: 'AUD', symbol: 'AU$', name: 'Australian Dollar' },
+            { code: 'JPY', symbol: '¥', name: 'Japanese Yen' },
+        ];
+
+        let html = '';
+        targetCurrencies.forEach(curr => {
+            const rate = globalExchangeRates[curr.code] || 1;
+            const converted = (amount * rate).toLocaleString(undefined, {
+                minimumFractionDigits: curr.code === 'JPY' ? 0 : 2,
+                maximumFractionDigits: curr.code === 'JPY' ? 0 : 2
+            });
+
+            html += `
+                <div class="p-3 rounded-xl bg-slate-50 hover:bg-indigo-50/50 border border-slate-200/80 transition text-center group">
+                    <div class="flex items-center justify-between text-[11px] font-bold text-slate-500 mb-1">
+                        <span>${curr.code}</span>
+                        <span class="text-[10px] text-slate-400">1 USD = ${rate.toFixed(2)}</span>
+                    </div>
+                    <p class="text-base font-extrabold text-slate-900 group-hover:text-indigo-600 transition tracking-tight">
+                        ${curr.symbol}${converted}
+                    </p>
+                    <span class="text-[10px] text-slate-400">${curr.name}</span>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+    }
+
+    loadCurrencyRates();
 </script>
 {% endblock %}

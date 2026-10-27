@@ -1,0 +1,86 @@
+{% extends 'expenses/base.html' %}
+
+{% block title %}404 - Page Not Found | ExpenseFlow{% endblock %}
+
+{% block content %}
+<div class="min-h-[70vh] flex items-center justify-center py-12 px-4">
+    <div class="max-w-xl w-full bg-white rounded-3xl p-8 sm:p-12 border border-slate-200/90 shadow-2xl shadow-slate-200/50 text-center relative overflow-hidden">
+        <!-- Background Glow Accent -->
+        <div class="absolute -top-24 -right-24 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-24 -left-24 w-48 h-48 bg-rose-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+        <!-- 404 Visual Icon Badge -->
+        <div class="w-20 h-20 rounded-3xl bg-gradient-to-tr from-rose-50 to-indigo-50 border border-slate-200/80 flex items-center justify-center mx-auto mb-6 text-rose-500 text-3xl shadow-inner">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+
+        <span class="inline-block px-3 py-1 rounded-full text-xs font-extrabold uppercase tracking-widest bg-rose-100 text-rose-700 border border-rose-200 mb-3">
+            Error Code 404
+        </span>
+
+        <h1 class="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">Page Not Found</h1>
+
+        <p class="text-sm text-slate-500 mt-3 max-w-md mx-auto leading-relaxed">
+            The destination URL you requested <code class="bg-slate-100 text-rose-600 px-2 py-0.5 rounded font-mono text-xs">{{ requested_path|default:request.path }}</code> does not exist or has been moved.
+        </p>
+
+        <!-- Error Resolution Callouts -->
+        <div class="my-6 p-4 rounded-2xl bg-slate-50 border border-slate-200/70 text-left text-xs space-y-2 text-slate-600">
+            <div class="flex items-start gap-2 font-medium">
+                <i class="fa-solid fa-circle-info text-indigo-500 mt-0.5"></i>
+                <span><strong>Quick Diagnosis:</strong> The endpoint may have been misspelled, or you may need to navigate from the main dashboard.</span>
+            </div>
+            <div class="flex items-start gap-2 font-medium">
+                <i class="fa-solid fa-robot text-emerald-500 mt-0.5"></i>
+                <span><strong>Assistant Ready:</strong> Our AI Assistant knows all system routes, error codes, and can assist you right now.</span>
+            </div>
+        </div>
+
+        <!-- Primary Action Buttons -->
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+            <!-- Ask the Assistant Option (Requirement) -->
+            <button type="button"
+                    onclick="window.openAssistantWithPrompt('I encountered a 404 Not Found error trying to visit {{ requested_path|default:request.path }}. Can you explain what error 404 is and help me navigate?')"
+                    class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-bold text-xs shadow-lg shadow-indigo-600/30 transition transform hover:-translate-y-0.5">
+                <i class="fa-solid fa-wand-magic-sparkles text-amber-300"></i>
+                <span>Ask the Assistant</span>
+            </button>
+
+            <!-- Dashboard Button -->
+            <a href="{% url 'expenses:dashboard' %}"
+               class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs shadow-sm transition">
+                <i class="fa-solid fa-house"></i>
+                <span>Return to Dashboard</span>
+            </a>
+
+            <!-- FAQs Link -->
+            <a href="{% url 'expenses:faq' %}"
+               class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl text-slate-500 hover:text-slate-800 font-semibold text-xs transition">
+                <i class="fa-solid fa-circle-question"></i>
+                <span>Browse FAQs</span>
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block auth_content %}
+<div class="max-w-md w-full bg-white rounded-3xl p-8 border border-slate-200/90 shadow-2xl text-center">
+    <div class="w-16 h-16 rounded-2xl bg-rose-50 text-rose-500 flex items-center justify-center mx-auto mb-4 text-2xl">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+    </div>
+    <span class="text-xs font-bold uppercase tracking-wider text-rose-600">Error 404</span>
+    <h1 class="text-2xl font-bold text-slate-900 mt-1">Page Not Found</h1>
+    <p class="text-xs text-slate-500 mt-2">The requested address does not exist.</p>
+    <div class="mt-6 space-y-2">
+        <button type="button"
+            onclick="window.openAssistantWithPrompt('What does Error 404 Not Found mean?')"
+            class="w-full py-3 px-4 rounded-xl bg-indigo-600 text-white font-bold text-xs shadow-md">
+            Ask the Assistant
+        </button>
+        <a href="{% url 'expenses:login' %}" class="block py-2 text-xs font-semibold text-slate-600 hover:text-slate-900">
+            &larr; Back to Login
+        </a>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,312 @@
+<!-- ExpenseFlow Floating AI Assistant Chat Widget -->
+<div id="aiChatContainer" class="fixed bottom-5 right-5 z-50 flex flex-col items-end">
+    <!-- Chat Window Modal -->
+    <div id="aiChatWindow" class="hidden mb-3 w-[92vw] sm:w-[400px] h-[550px] max-h-[82vh] bg-white rounded-2xl shadow-2xl border border-slate-200/90 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <!-- Chat Header -->
+        <div class="px-4 py-3.5 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between border-b border-indigo-900/40">
+            <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-500 to-emerald-400 flex items-center justify-center text-white text-base shadow-md">
+                    <i class="fa-solid fa-robot"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="font-bold text-sm tracking-tight">ExpenseFlow AI</span>
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    </div>
+                    <span class="text-[11px] text-slate-300">FAQ & Error Code Assistant</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-1 text-slate-400">
+                <button type="button" onclick="clearChatHistory()" title="Clear Chat" class="p-1.5 hover:text-white hover:bg-slate-800 rounded-lg transition text-xs">
+                    <i class="fa-solid fa-rotate-left"></i>
+                </button>
+                <button type="button" onclick="toggleAIChat()" title="Close" class="p-1.5 hover:text-white hover:bg-slate-800 rounded-lg transition text-sm">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Quick Topic Chips -->
+        <div class="px-3 py-2 bg-slate-50 border-b border-slate-100 flex items-center gap-1.5 overflow-x-auto text-[11px] no-scrollbar">
+            <span class="text-slate-400 shrink-0 font-medium"><i class="fa-solid fa-bolt text-amber-500 mr-1"></i>Try:</span>
+            <button onclick="sendQuickPrompt('Explain Error 404')" class="shrink-0 px-2 py-1 bg-white hover:bg-indigo-50 text-slate-700 hover:text-indigo-600 rounded-lg border border-slate-200 font-medium transition">
+                Error 404
+            </button>
+            <button onclick="sendQuickPrompt('Explain Error 500')" class="shrink-0 px-2 py-1 bg-white hover:bg-indigo-50 text-slate-700 hover:text-indigo-600 rounded-lg border border-slate-200 font-medium transition">
+                Error 500
+            </button>
+            <button onclick="sendQuickPrompt('What is error EXP-4001?')" class="shrink-0 px-2 py-1 bg-white hover:bg-indigo-50 text-slate-700 hover:text-indigo-600 rounded-lg border border-slate-200 font-medium transition">
+                EXP-4001
+            </button>
+            <button onclick="sendQuickPrompt('How do budgets work?')" class="shrink-0 px-2 py-1 bg-white hover:bg-indigo-50 text-slate-700 hover:text-indigo-600 rounded-lg border border-slate-200 font-medium transition">
+                Budgets
+            </button>
+            <button onclick="sendQuickPrompt('Create a support ticket')" class="shrink-0 px-2 py-1 bg-white hover:bg-rose-50 text-slate-700 hover:text-rose-600 rounded-lg border border-slate-200 font-medium transition">
+                Support Ticket
+            </button>
+        </div>
+
+        <!-- Messages Body -->
+        <div id="aiChatMessages" class="flex-1 p-4 overflow-y-auto space-y-3.5 bg-slate-50/40 text-xs">
+            <!-- Initial Greeting -->
+            <div class="flex items-start gap-2.5">
+                <div class="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0 text-xs shadow-sm">
+                    <i class="fa-solid fa-robot"></i>
+                </div>
+                <div class="bg-white p-3 rounded-2xl rounded-tl-none border border-slate-200 shadow-sm text-slate-800 space-y-1.5 max-w-[85%]">
+                    <p class="font-semibold text-slate-900">Hello there! 👋</p>
+                    <p class="text-slate-600 leading-relaxed">
+                        I am your <strong>ExpenseFlow Assistant</strong>. I answer questions from our FAQ database, explain HTTP and application error codes, and automatically open support tickets if you need human assistance.
+                    </p>
+                    <p class="text-[11px] text-slate-400">Ask a question below or pick a topic chip above!</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Typing Indicator (Hidden by default) -->
+        <div id="aiTypingIndicator" class="hidden px-4 py-2 flex items-center gap-2 text-xs text-slate-400">
+            <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-bounce"></span>
+            <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-bounce [animation-delay:0.2s]"></span>
+            <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-bounce [animation-delay:0.4s]"></span>
+            <span class="text-[11px] text-slate-500">Searching FAQs & knowledge base...</span>
+        </div>
+
+        <!-- Chat Input Form -->
+        <div class="p-3 bg-white border-t border-slate-100">
+            <form id="aiChatForm" onsubmit="handleChatSubmit(event)" class="flex items-center gap-2">
+                <input type="text" id="aiChatInput" placeholder="Ask about expenses, error codes, FAQs..."
+                    class="flex-1 px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50/50 text-slate-800"
+                    autocomplete="off">
+                <button type="submit" id="aiSendBtn"
+                    class="w-9 h-9 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white flex items-center justify-center text-xs shadow-md shadow-indigo-600/30 transition">
+                    <i class="fa-solid fa-paper-plane"></i>
+                </button>
+            </form>
+            <div class="mt-1.5 flex items-center justify-between text-[10px] text-slate-400 px-1">
+                <span>SQL FAQs &bull; MongoDB Logged</span>
+                <a href="{% url 'expenses:faq' %}" class="hover:text-indigo-600 underline">View Directory</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Launcher Button -->
+    <button id="aiChatLauncher" type="button" onclick="toggleAIChat()"
+        class="group relative flex items-center gap-2.5 px-4 py-3 bg-gradient-to-r from-indigo-600 via-indigo-700 to-slate-900 text-white rounded-full shadow-2xl hover:shadow-indigo-500/40 transition-all duration-300 transform hover:-translate-y-1 focus:outline-none ring-4 ring-indigo-500/20">
+        <div class="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-sm">
+            <i class="fa-solid fa-wand-magic-sparkles text-amber-300"></i>
+        </div>
+        <span class="font-bold text-xs tracking-wide pr-1">Ask AI Assistant</span>
+        <span class="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-400 border-2 border-white animate-pulse"></span>
+    </button>
+</div>
+
+<script>
+    // Unique session ID for MongoDB logging
+    let chatSessionId = sessionStorage.getItem('expenseflow_chat_session');
+    if (!chatSessionId) {
+        chatSessionId = 'sess_' + Math.random().toString(36).substring(2, 12);
+        sessionStorage.setItem('expenseflow_chat_session', chatSessionId);
+    }
+
+    function toggleAIChat() {
+        const chatWin = document.getElementById('aiChatWindow');
+        chatWin.classList.toggle('hidden');
+        if (!chatWin.classList.contains('hidden')) {
+            document.getElementById('aiChatInput').focus();
+            scrollChatToBottom();
+        }
+    }
+
+    function scrollChatToBottom() {
+        const container = document.getElementById('aiChatMessages');
+        container.scrollTop = container.scrollHeight;
+    }
+
+    function clearChatHistory() {
+        const container = document.getElementById('aiChatMessages');
+        container.innerHTML = `
+            <div class="flex items-start gap-2.5">
+                <div class="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0 text-xs shadow-sm">
+                    <i class="fa-solid fa-robot"></i>
+                </div>
+                <div class="bg-white p-3 rounded-2xl rounded-tl-none border border-slate-200 shadow-sm text-slate-800 space-y-1.5 max-w-[85%]">
+                    <p class="font-semibold text-slate-900">Chat history cleared.</p>
+                    <p class="text-slate-600 leading-relaxed">How can I help you today? Ask any question about ExpenseFlow or error codes.</p>
+                </div>
+            </div>
+        `;
+    }
+
+    function sendQuickPrompt(promptText) {
+        const chatWin = document.getElementById('aiChatWindow');
+        if (chatWin.classList.contains('hidden')) {
+            toggleAIChat();
+        }
+        document.getElementById('aiChatInput').value = promptText;
+        document.getElementById('aiChatForm').dispatchEvent(new Event('submit', { cancelable: true }));
+    }
+
+    // Global hook for 404, 500, or any page buttons
+    window.openAssistantWithPrompt = function(promptText) {
+        const chatWin = document.getElementById('aiChatWindow');
+        if (chatWin.classList.contains('hidden')) {
+            toggleAIChat();
+        }
+        document.getElementById('aiChatInput').value = promptText;
+        document.getElementById('aiChatForm').dispatchEvent(new Event('submit', { cancelable: true }));
+    };
+
+    async function handleChatSubmit(e) {
+        e.preventDefault();
+        const input = document.getElementById('aiChatInput');
+        const text = input.value.trim();
+        if (!text) return;
+
+        input.value = '';
+        appendUserMessage(text);
+
+        // Show typing indicator
+        document.getElementById('aiTypingIndicator').classList.remove('hidden');
+        scrollChatToBottom();
+
+        try {
+            const res = await fetch('/api/chat/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken') || '',
+                },
+                body: JSON.stringify({
+                    message: text,
+                    session_id: chatSessionId,
+                })
+            });
+
+            const data = await res.json();
+            document.getElementById('aiTypingIndicator').classList.add('hidden');
+
+            if (res.ok) {
+                appendBotMessage(data.reply, data.suggested_actions, data.ticket_id);
+            } else {
+                appendBotMessage("⚠️ Sorry, I encountered an error connecting to the assistant backend. Please try again or open a support ticket.");
+            }
+        } catch (err) {
+            document.getElementById('aiTypingIndicator').classList.add('hidden');
+            appendBotMessage("⚠️ Network error: Unable to reach the assistant server. Please check your connection.");
+        }
+    }
+
+    function appendUserMessage(msg) {
+        const container = document.getElementById('aiChatMessages');
+        const userDiv = document.createElement('div');
+        userDiv.className = 'flex items-start justify-end gap-2';
+        userDiv.innerHTML = `
+            <div class="bg-indigo-600 text-white p-3 rounded-2xl rounded-tr-none shadow-sm max-w-[85%] leading-relaxed">
+                ${escapeHTML(msg)}
+            </div>
+            <div class="w-6 h-6 rounded-full bg-slate-300 text-slate-700 flex items-center justify-center shrink-0 text-[10px] font-bold">
+                You
+            </div>
+        `;
+        container.appendChild(userDiv);
+        scrollChatToBottom();
+    }
+
+    function appendBotMessage(replyMarkdown, actions = [], ticketId = null) {
+        const container = document.getElementById('aiChatMessages');
+        const botDiv = document.createElement('div');
+        botDiv.className = 'flex items-start gap-2.5';
+
+        // Format basic markdown (bold, italic, ticket badge)
+        let formatted = escapeHTML(replyMarkdown)
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+            .replace(/`([^`]+)`/g, '<code class="bg-slate-100 text-indigo-700 px-1 py-0.5 rounded text-[11px] font-mono">$1</code>')
+            .replace(/\n\n/g, '<br><br>')
+            .replace(/\n/g, '<br>');
+
+        let actionsHTML = '';
+        if (actions && actions.length > 0) {
+            actionsHTML = '<div class="mt-2.5 pt-2 border-t border-slate-100 flex flex-wrap gap-1.5">';
+            actions.forEach(a => {
+                if (a.action === 'navigate') {
+                    actionsHTML += `<a href="${a.url}" class="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-[10px] font-semibold transition">${a.label} &rarr;</a>`;
+                } else if (a.action === 'create_ticket') {
+                    actionsHTML += `<button onclick="sendQuickPrompt('Create a support ticket: ${escapeHTML(a.subject || '')}')" class="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-[10px] font-semibold transition"><i class="fa-solid fa-ticket mr-1"></i>${a.label}</button>`;
+                } else if (a.action === 'chat') {
+                    actionsHTML += `<button onclick="sendQuickPrompt('${escapeHTML(a.message || '')}')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[10px] font-semibold transition">${a.label}</button>`;
+                }
+            });
+            actionsHTML += '</div>';
+        }
+
+        // Feedback buttons
+        const feedbackHTML = `
+            <div class="mt-2 flex items-center justify-between text-[10px] text-slate-400">
+                <span>Was this helpful?</span>
+                <div class="flex items-center gap-1.5">
+                    <button onclick="submitFeedback(1, this)" title="Helpful" class="hover:text-emerald-600 p-1 transition"><i class="fa-regular fa-thumbs-up"></i></button>
+                    <button onclick="submitFeedback(-1, this)" title="Not helpful" class="hover:text-rose-600 p-1 transition"><i class="fa-regular fa-thumbs-down"></i></button>
+                </div>
+            </div>
+        `;
+
+        botDiv.innerHTML = `
+            <div class="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0 text-xs shadow-sm">
+                <i class="fa-solid fa-robot"></i>
+            </div>
+            <div class="bg-white p-3 rounded-2xl rounded-tl-none border border-slate-200 shadow-sm text-slate-800 space-y-1 max-w-[85%] leading-relaxed">
+                <div>${formatted}</div>
+                ${actionsHTML}
+                ${feedbackHTML}
+            </div>
+        `;
+
+        container.appendChild(botDiv);
+        scrollChatToBottom();
+    }
+
+    async function submitFeedback(rating, btnElement) {
+        const parent = btnElement.parentElement;
+        parent.innerHTML = '<span class="text-emerald-600 font-semibold"><i class="fa-solid fa-check mr-1"></i>Feedback saved</span>';
+
+        try {
+            await fetch('/api/chat/feedback/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken') || '',
+                },
+                body: JSON.stringify({
+                    session_id: chatSessionId,
+                    rating: rating,
+                    comments: rating === 1 ? 'Positive feedback' : 'Needs improvement'
+                })
+            });
+        } catch (e) {
+            console.warn('Feedback logging error:', e);
+        }
+    }
+
+    function escapeHTML(str) {
+        if (!str) return '';
+        const p = document.createElement('p');
+        p.appendChild(document.createTextNode(str));
+        return p.innerHTML;
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>

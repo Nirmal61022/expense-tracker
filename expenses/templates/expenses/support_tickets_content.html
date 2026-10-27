@@ -1,0 +1,151 @@
+<div class="space-y-8 max-w-6xl mx-auto">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <div class="flex items-center gap-2 mb-1">
+                <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-100 text-indigo-700">SQL Backed</span>
+                <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-700">Live Support Desk</span>
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Support Tickets</h1>
+            <p class="text-sm text-slate-500 mt-1">Submit inquiries or track tickets created by you or opened automatically by the AI Assistant.</p>
+        </div>
+
+        <button type="button" onclick="window.openAssistantWithPrompt('Help me create a support ticket')"
+            class="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-bold text-xs rounded-xl shadow-md transition transform hover:-translate-y-0.5">
+            <i class="fa-solid fa-wand-magic-sparkles text-amber-300"></i>
+            <span>File via Assistant</span>
+        </button>
+    </div>
+
+    <!-- Create Ticket Form Card -->
+    <div class="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200/80 shadow-sm max-w-2xl">
+        <h2 class="text-base sm:text-lg font-bold text-slate-900 mb-1 flex items-center gap-2">
+            <i class="fa-solid fa-ticket text-indigo-600"></i>
+            Create New Support Ticket
+        </h2>
+        <p class="text-xs text-slate-500 mb-6">Need assistance with an error code, billing question, or feature request? Submit your ticket directly below.</p>
+
+        <form method="post" action="{% url 'expenses:support_tickets' %}" class="space-y-4">
+            {% csrf_token %}
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">Your Name</label>
+                    <input type="text" name="name" value="{% if user.is_authenticated %}{{ user.username }}{% endif %}" placeholder="John Doe"
+                        class="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 bg-slate-50/50 focus:bg-white text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">Email Address <span class="text-rose-500">*</span></label>
+                    <input type="email" name="email" required value="{% if user.is_authenticated %}{{ user.email }}{% endif %}" placeholder="name@example.com"
+                        class="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 bg-slate-50/50 focus:bg-white text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="sm:col-span-2">
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">Subject / Topic <span class="text-rose-500">*</span></label>
+                    <input type="text" name="subject" required placeholder="Brief description of the issue (e.g. Error 500 on export)"
+                        class="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 bg-slate-50/50 focus:bg-white text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">Priority</label>
+                    <select name="priority" class="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 bg-slate-50/50 focus:bg-white text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition">
+                        <option value="low">Low Priority</option>
+                        <option value="medium" selected>Medium Priority</option>
+                        <option value="high">High Priority</option>
+                        <option value="urgent">Urgent</option>
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">Detailed Description <span class="text-rose-500">*</span></label>
+                <textarea name="description" rows="4" required placeholder="Please provide any relevant details, error messages, or steps that led to this issue..."
+                    class="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 bg-slate-50/50 focus:bg-white text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition"></textarea>
+            </div>
+
+            <div class="pt-2 flex justify-end">
+                <button type="submit" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/30 transition">
+                    Submit Support Ticket
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- User Tickets List -->
+    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+        <div class="p-6 border-b border-slate-100 flex items-center justify-between">
+            <div>
+                <h2 class="text-base font-bold text-slate-900">Your Support Tickets</h2>
+                <p class="text-xs text-slate-500">Persisted in SQL database</p>
+            </div>
+            <span class="text-xs font-bold text-slate-500">
+                Total: {{ tickets|length }} ticket{{ tickets|length|pluralize }}
+            </span>
+        </div>
+
+        {% if tickets %}
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs sm:text-sm">
+                <thead>
+                    <tr class="bg-slate-50/70 border-b border-slate-200 text-xs font-bold uppercase tracking-wider text-slate-500">
+                        <th class="py-3 px-6">Ticket ID</th>
+                        <th class="py-3 px-6">Subject</th>
+                        <th class="py-3 px-6">Priority</th>
+                        <th class="py-3 px-6">Status</th>
+                        <th class="py-3 px-6">Source</th>
+                        <th class="py-3 px-6 text-right">Created</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for t in tickets %}
+                    <tr class="hover:bg-slate-50/60 transition">
+                        <td class="py-4 px-6 font-bold font-mono text-indigo-600">
+                            #{{ t.ticket_id }}
+                        </td>
+                        <td class="py-4 px-6 font-semibold text-slate-800">
+                            {{ t.subject }}
+                            <p class="text-[11px] text-slate-400 font-normal truncate max-w-xs">{{ t.description }}</p>
+                        </td>
+                        <td class="py-4 px-6">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold
+                                {% if t.priority == 'urgent' or t.priority == 'high' %}bg-rose-100 text-rose-700
+                                {% elif t.priority == 'medium' %}bg-amber-100 text-amber-700
+                                {% else %}bg-slate-100 text-slate-700{% endif %}">
+                                {{ t.get_priority_display }}
+                            </span>
+                        </td>
+                        <td class="py-4 px-6">
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold
+                                {% if t.status == 'resolved' %}bg-emerald-100 text-emerald-800
+                                {% elif t.status == 'in_progress' %}bg-sky-100 text-sky-800
+                                {% else %}bg-amber-100 text-amber-800{% endif %}">
+                                {{ t.get_status_display }}
+                            </span>
+                        </td>
+                        <td class="py-4 px-6 text-slate-400 text-xs">
+                            {% if t.source == 'ai_assistant' or t.source == 'ai_assistant_fallback' %}
+                                <span class="text-indigo-600 font-medium"><i class="fa-solid fa-robot mr-1"></i>AI Assistant</span>
+                            {% else %}
+                                <span><i class="fa-solid fa-globe mr-1"></i>Web Form</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-4 px-6 text-right text-slate-500 text-xs font-medium">
+                            {{ t.created_at|date:"M d, Y" }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="p-12 text-center text-slate-400 text-sm">
+            <i class="fa-solid fa-ticket text-3xl mb-2 text-slate-300"></i>
+            <p>You have no active support tickets.</p>
+            <p class="text-xs text-slate-400 mt-1">If you need help, submit a ticket above or chat with the AI assistant.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>

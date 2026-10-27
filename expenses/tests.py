@@ -3,7 +3,8 @@ from datetime import date, timedelta
 from django.test import TestCase, Client
 from django.urls import reverse
 from django.contrib.auth.models import User
-from .models import Expense, MonthlyBudget, ExpenseCategory, PaymentMethod
+from .models import Expense, MonthlyBudget, ExpenseCategory, PaymentMethod, FAQ, ErrorCode, SupportTicket
+import json
 
 
 class AuthenticationTests(TestCase):
@@ -289,3 +290,143 @@ class BudgetAndReportTests(TestCase):
         self.assertEqual(response.context['total_spent'], Decimal('900.00'))
         self.assertEqual(response.context['total_count'], 2)
         self.assertEqual(response.context['top_category'], ExpenseCategory.BILLS)
+
+
+class FAQAndErrorCodeTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+
+    def test_minimum_10_faqs_exist(self):
+        count = FAQ.objects.filter(is_active=True).count()
+        self.assertGreaterEqual(count, 10, "Assessment requires a minimum of 10 FAQs stored in SQL")
+
+    def test_minimum_8_error_codes_exist(self):
+        required_codes = ['400', '401', '403', '404', '429', '500', '503', 'EXP-4001']
+        for code in required_codes:
+            exists = ErrorCode.objects.filter(code__iexact=code, is_active=True).exists()
+            self.assertTrue(exists, f"Required error code {code} not found in ErrorCode table")
+
+    def test_faq_page_loads_with_faqs_and_error_codes(self):
+        response = self.client.get(reverse('expenses:faq'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Frequently Asked Questions')
+        self.assertContains(response, 'Error 404')
+        self.assertContains(response, 'EXP-4001')
+
+
+class AIAssistantAndSupportTicketTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user(username='alice_ai', email='alice@example.com', password='Password123!')
+        self.client.login(username='alice_ai', password='Password123!')
+
+    def test_ai_answers_from_faq_data(self):
+        response = self.client.post(
+            reverse('expenses:api_chat'),
+            data=json.dumps({'message': 'How do monthly budgets work?', 'session_id': 'test-session'}),
+            content_type='application/json'
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn('Budget', data['reply'])
+        self.assertEqual(data['intent'], 'faq')
+
+    def test_ai_explains_error_code(self):
+        response = self.client.post(
+            reverse('expenses:api_chat'),
+            data=json.dumps({'message': 'Can you explain error 404?', 'session_id': 'test-session'}),
+            content_type='application/json'
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn('404', data['reply'])
+        self.assertEqual(data['intent'], 'error_code')
+
+    def test_ai_explains_site_specific_error_code(self):
+        response = self.client.post(
+            reverse('expenses:api_chat'),
+            data=json.dumps({'message': 'What is error EXP-4001?', 'session_id': 'test-session'}),
+            content_type='application/json'
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn('EXP-4001', data['reply'])
+        self.assertEqual(data['intent'], 'error_code')
+
+    def test_ai_creates_support_ticket_when_cannot_answer(self):
+        initial_ticket_count = SupportTicket.objects.count()
+        response = self.client.post(
+            reverse('expenses:api_chat'),
+            data=json.dumps({'message': 'I have a complex custom question about extraterrestrial taxation', 'session_id': 'test-session'}),
+            content_type='application/json'
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data['ticket_created'])
+        self.assertIsNotNone(data['ticket_id'])
+        self.assertEqual(SupportTicket.objects.count(), initial_ticket_count + 1)
+        ticket = SupportTicket.objects.get(ticket_id=data['ticket_id'])
+        self.assertEqual(ticket.source, 'ai_assistant_fallback')
+
+    def test_chat_feedback_endpoint(self):
+        response = self.client.post(
+            reverse('expenses:api_chat_feedback'),
+            data=json.dumps({'session_id': 'test-session', 'rating': 1, 'comments': 'Very helpful!'}),
+            content_type='application/json'
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['status'], 'success')
+
+    def test_support_ticket_portal_creation(self):
+        response = self.client.post(reverse('expenses:support_tickets'), {
+            'name': 'Alice Support',
+            'email': 'alice@example.com',
+            'subject': 'Assistance with CSV export formatting',
+            'description': 'I need custom delimiter support in CSV exports',
+            'priority': 'medium'
+        })
+        self.assertEqual(response.status_code, 302)
+        ticket = SupportTicket.objects.filter(subject='Assistance with CSV export formatting').first()
+        self.assertIsNotNone(ticket)
+        self.assertTrue(ticket.ticket_id.startswith('TCK-'))
+        self.assertEqual(ticket.status, 'open')
+
+
+class HealthCheckAndThirdPartyAPITests(TestCase):
+    def setUp(self):
+        self.client = Client()
+
+    def test_health_check_endpoint(self):
+        response = self.client.get(reverse('expenses:health_check'))
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['status'], 'healthy')
+        self.assertEqual(data['checks']['sql_database']['status'], 'ok')
+        self.assertIn('mongodb', data['checks'])
+
+    def test_third_party_exchange_rates_api(self):
+        response = self.client.get(reverse('expenses:api_exchange_rates'))
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['base'], 'USD')
+        self.assertIn('EUR', data['rates'])
+        self.assertIn('GBP', data['rates'])
+        self.assertIn('INR', data['rates'])
+        self.assertIn('is_fallback', data)
+
+
+class CustomErrorPagesTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+
+    def test_custom_404_page_has_ask_assistant(self):
+        response = self.client.get('/non-existent-page-url-xyz/')
+        self.assertEqual(response.status_code, 404)
+        self.assertContains(response, 'Ask the Assistant', status_code=404)
+        self.assertContains(response, 'Page Not Found', status_code=404)
+
+    def test_custom_404_view_renders_correctly(self):
+        response = self.client.get(reverse('expenses:dashboard') + 'nonexistent/')
+        self.assertEqual(response.status_code, 404)
+        self.assertContains(response, 'Ask the Assistant', status_code=404)
+

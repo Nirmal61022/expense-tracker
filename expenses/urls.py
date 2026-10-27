@@ -16,4 +16,12 @@ urlpatterns = [
     path('budgets/', views.budget_manage_view, name='budget_manage'),
     path('budgets/<int:pk>/delete/', views.budget_delete_view, name='budget_delete'),
     path('export/csv/', views.export_csv_view, name='export_csv'),
+    # Assessment Requirements additions
+    path('faq/', views.faq_view, name='faq'),
+    path('support/', views.support_ticket_view, name='support_tickets'),
+    path('health/', views.health_check_view, name='health_check'),
+    path('healthz/', views.health_check_view, name='healthz'),
+    path('api/chat/', views.api_chat_view, name='api_chat'),
+    path('api/chat/feedback/', views.api_chat_feedback_view, name='api_chat_feedback'),
+    path('api/exchange-rates/', views.api_exchange_rates_view, name='api_exchange_rates'),
 ]

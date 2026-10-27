@@ -88,6 +88,16 @@
                     <i class="fa-solid fa-bullseye w-5 text-center text-base"></i>
                     <span>Budget Planner</span>
                 </a>
+
+                <a href="{% url 'expenses:faq' %}" class="flex items-center gap-3.5 px-4 py-3 rounded-xl font-medium text-sm transition-all duration-200 {% if request.resolver_match.url_name == 'faq' %}bg-indigo-600 text-white shadow-lg shadow-indigo-600/30{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white{% endif %}">
+                    <i class="fa-solid fa-circle-question w-5 text-center text-base"></i>
+                    <span>FAQs & Errors</span>
+                </a>
+
+                <a href="{% url 'expenses:support_tickets' %}" class="flex items-center gap-3.5 px-4 py-3 rounded-xl font-medium text-sm transition-all duration-200 {% if request.resolver_match.url_name == 'support_tickets' %}bg-indigo-600 text-white shadow-lg shadow-indigo-600/30{% else %}text-slate-300 hover:bg-slate-800/80 hover:text-white{% endif %}">
+                    <i class="fa-solid fa-headset w-5 text-center text-base"></i>
+                    <span>Support Tickets</span>
+                </a>
             </nav>
 
             <!-- Bottom Action & User Box -->
@@ -149,6 +159,12 @@
         </a>
         <a href="{% url 'expenses:budget_manage' %}" class="block px-3 py-2.5 rounded-lg text-sm font-medium {% if request.resolver_match.url_name == 'budget_manage' %}bg-indigo-600 text-white{% else %}text-slate-300 hover:bg-slate-800{% endif %}">
             <i class="fa-solid fa-bullseye mr-2"></i> Budget Planner
+        </a>
+        <a href="{% url 'expenses:faq' %}" class="block px-3 py-2.5 rounded-lg text-sm font-medium {% if request.resolver_match.url_name == 'faq' %}bg-indigo-600 text-white{% else %}text-slate-300 hover:bg-slate-800{% endif %}">
+            <i class="fa-solid fa-circle-question mr-2"></i> FAQs & Errors
+        </a>
+        <a href="{% url 'expenses:support_tickets' %}" class="block px-3 py-2.5 rounded-lg text-sm font-medium {% if request.resolver_match.url_name == 'support_tickets' %}bg-indigo-600 text-white{% else %}text-slate-300 hover:bg-slate-800{% endif %}">
+            <i class="fa-solid fa-headset mr-2"></i> Support Tickets
         </a>
         <div class="pt-3 border-t border-slate-800 flex items-center justify-between">
             <div class="text-sm">
@@ -213,15 +229,16 @@
                 <span class="text-xl font-bold tracking-tight text-slate-900">Expense<span class="text-indigo-600">Flow</span></span>
             </a>
             <div class="flex items-center gap-3">
+                <a href="{% url 'expenses:faq' %}" class="text-sm font-semibold text-slate-600 hover:text-slate-900 px-3 py-2">FAQs & Errors</a>
                 <a href="{% url 'expenses:login' %}" class="text-sm font-semibold text-slate-600 hover:text-slate-900 px-3 py-2">Sign in</a>
                 <a href="{% url 'expenses:register' %}" class="text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg shadow-sm transition">Create Account</a>
             </div>
         </div>
     </nav>
 
-    <div class="flex-1 flex items-center justify-center p-4">
+    <div class="flex-1 p-4 sm:p-6 max-w-7xl w-full mx-auto flex flex-col justify-center">
         {% if messages %}
-        <div class="max-w-md w-full mb-4 space-y-2">
+        <div class="max-w-md w-full mx-auto mb-4 space-y-2">
             {% for message in messages %}
             <div class="p-4 rounded-xl text-sm font-medium {% if message.tags == 'error' %}bg-rose-50 text-rose-800 border border-rose-200{% else %}bg-indigo-50 text-indigo-800 border border-indigo-200{% endif %}">
                 {{ message }}
@@ -249,6 +266,7 @@
     }
 </script>
 <script src="{% static 'expenses/js/main.js' %}"></script>
+{% include 'expenses/chat_widget.html' %}
 {% block extra_scripts %}{% endblock %}
 </body>
 </html>

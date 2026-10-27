@@ -13,8 +13,12 @@ from django.db.models import Sum, Count, Avg, Max
 from django.core.paginator import Paginator
 from django.utils import timezone
 
-from .models import Expense, MonthlyBudget, ExpenseCategory, PaymentMethod
+from .models import Expense, MonthlyBudget, ExpenseCategory, PaymentMethod, FAQ, ErrorCode, SupportTicket
 from .forms import UserRegistrationForm, ExpenseForm, MonthlyBudgetForm
+from .services import process_chat_message, get_live_exchange_rates
+from .mongo import log_chat_feedback, check_mongo_health
+from django.views.decorators.csrf import csrf_exempt
+from django.db import connection
 
 
 def register_view(request):
@@ -543,3 +547,201 @@ def export_csv_view(request):
         ])
 
     return response
+
+
+def faq_view(request):
+    """
+    Displays the FAQ and Error Codes reference directory.
+    Supports search query parameter ?q=
+    """
+    query = request.GET.get('q', '').strip()
+    faqs = FAQ.objects.filter(is_active=True)
+    error_codes = ErrorCode.objects.filter(is_active=True)
+
+    if query:
+        faqs = faqs.filter(Q(question__icontains=query) | Q(answer__icontains=query))
+        error_codes = error_codes.filter(
+            Q(code__icontains=query) | Q(title__icontains=query) |
+            Q(description__icontains=query) | Q(solution__icontains=query)
+        )
+
+    # Group FAQs by category
+    categories = [
+        ('getting_started', 'Getting Started'),
+        ('expenses', 'Expenses & Transactions'),
+        ('budgets', 'Budgets & Limits'),
+        ('reports', 'Reports & Analytics'),
+        ('account', 'Account & Security'),
+        ('troubleshooting', 'Troubleshooting'),
+    ]
+
+    faq_grouped = []
+    for cat_key, cat_name in categories:
+        cat_items = [f for f in faqs if f.category == cat_key]
+        if cat_items:
+            faq_grouped.append({'name': cat_name, 'key': cat_key, 'items': cat_items})
+
+    context = {
+        'faq_grouped': faq_grouped,
+        'all_faqs': faqs,
+        'error_codes': error_codes,
+        'query': query,
+        'total_faqs': faqs.count(),
+        'total_errors': error_codes.count(),
+    }
+    return render(request, 'expenses/faq.html', context)
+
+
+def support_ticket_view(request):
+    """
+    Allows users to view their support tickets or create a new support ticket.
+    Stored in SQL database.
+    """
+    user = request.user if request.user.is_authenticated else None
+
+    if request.method == 'POST':
+        subject = request.POST.get('subject', '').strip()
+        description = request.POST.get('description', '').strip()
+        email = request.POST.get('email', '').strip()
+        name = request.POST.get('name', '').strip()
+        priority = request.POST.get('priority', 'medium')
+
+        if not email and user and user.email:
+            email = user.email
+        if not name and user:
+            name = user.username
+
+        if subject and description and email:
+            ticket = SupportTicket.objects.create(
+                user=user,
+                name=name or 'Guest',
+                email=email,
+                subject=subject,
+                description=description,
+                priority=priority if priority in ['low', 'medium', 'high', 'urgent'] else 'medium',
+                source='web_portal'
+            )
+            messages.success(request, f"Support ticket #{ticket.ticket_id} created successfully! Our team will contact you at {ticket.email}.")
+            return redirect('expenses:support_tickets')
+        else:
+            messages.error(request, "Please fill in all required fields (Email, Subject, Description).")
+
+    # Fetch user's tickets if authenticated, or recent tickets for guest session
+    tickets = []
+    if user:
+        tickets = SupportTicket.objects.filter(user=user).order_by('-created_at')
+
+    return render(request, 'expenses/support_tickets.html', {
+        'tickets': tickets,
+    })
+
+
+@csrf_exempt
+def api_chat_view(request):
+    """
+    API endpoint for the AI Assistant floating widget.
+    Processes user input, queries FAQs, explains error codes, or opens support ticket.
+    Logs interaction to MongoDB.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST method required'}, status=405)
+
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+    except Exception:
+        data = request.POST
+
+    message = data.get('message', '').strip()
+    session_id = data.get('session_id') or request.session.session_key or 'anonymous-session'
+
+    if not message:
+        return JsonResponse({'error': 'Message content is required'}, status=400)
+
+    user = request.user if request.user.is_authenticated else None
+    response_data = process_chat_message(user_message=message, user=user, session_id=session_id)
+
+    return JsonResponse(response_data)
+
+
+@csrf_exempt
+def api_chat_feedback_view(request):
+    """
+    API endpoint to record thumbs-up / thumbs-down ratings and user feedback in MongoDB.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST method required'}, status=405)
+
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+    except Exception:
+        data = request.POST
+
+    session_id = data.get('session_id') or request.session.session_key or 'anonymous'
+    rating = data.get('rating', 1)
+    comments = data.get('comments', '')
+    user_id = request.user.id if request.user.is_authenticated else None
+
+    inserted_id = log_chat_feedback(session_id=session_id, rating=rating, comments=comments, user_id=user_id)
+    return JsonResponse({'status': 'success', 'feedback_id': inserted_id})
+
+
+def api_exchange_rates_view(request):
+    """
+    Third-party API endpoint with a strict 2.0s time limit and fallback offline dataset.
+    """
+    base = request.GET.get('base', 'USD').upper()
+    data = get_live_exchange_rates(base_currency=base)
+    return JsonResponse(data)
+
+
+def health_check_view(request):
+    """
+    Health check endpoint for monitoring uptime, SQL database connection, and MongoDB status.
+    """
+    health_data = {
+        'status': 'healthy',
+        'timestamp': timezone.now().isoformat(),
+        'service': 'ExpenseFlow Web Application',
+        'version': '1.1.0',
+        'checks': {}
+    }
+
+    # 1. SQL Database Check
+    try:
+        connection.ensure_connection()
+        health_data['checks']['sql_database'] = {
+            'status': 'ok',
+            'engine': connection.settings_dict['ENGINE'].split('.')[-1],
+        }
+    except Exception as e:
+        health_data['status'] = 'degraded'
+        health_data['checks']['sql_database'] = {
+            'status': 'error',
+            'error': str(e)
+        }
+
+    # 2. MongoDB Check
+    mongo_status = check_mongo_health()
+    health_data['checks']['mongodb'] = mongo_status
+
+    status_code = 200 if health_data['status'] == 'healthy' else 503
+    return JsonResponse(health_data, status=status_code)
+
+
+def custom_404_view(request, exception=None):
+    """
+    Custom 404 Page Not Found with 'Ask the assistant' option.
+    """
+    return render(request, 'expenses/404.html', {
+        'requested_path': request.path,
+    }, status=404)
+
+
+def custom_500_view(request):
+    """
+    Custom 500 Internal Server Error with 'Ask the assistant' option.
+    """
+    return render(request, 'expenses/500.html', {
+        'requested_path': request.path,
+    }, status=500)
+

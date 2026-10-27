@@ -11,7 +11,7 @@ services:
     buildCommand: "./build.sh"
     startCommand: "gunicorn expense_project.wsgi:application"
     plan: free
-    healthCheckPath: /login/
+    healthCheckPath: /health/
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -23,3 +23,7 @@ services:
         value: "False"
       - key: PYTHON_VERSION
         value: "3.11.9"
+      - key: MONGODB_URI
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false

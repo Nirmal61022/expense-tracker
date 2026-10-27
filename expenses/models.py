@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
 from decimal import Decimal
+import uuid
 
 
 class ExpenseCategory(models.TextChoices):
@@ -86,3 +87,92 @@ class MonthlyBudget(models.Model):
 
     def __str__(self):
         return f"{self.user.username} Budget - {self.year}/{self.month:02d}: {self.amount}"
+
+
+class FAQ(models.Model):
+    CATEGORY_CHOICES = [
+        ('getting_started', 'Getting Started'),
+        ('expenses', 'Expenses & Transactions'),
+        ('budgets', 'Budgets & Limits'),
+        ('reports', 'Reports & Analytics'),
+        ('account', 'Account & Security'),
+        ('troubleshooting', 'Troubleshooting'),
+    ]
+
+    question = models.CharField(max_length=255)
+    answer = models.TextField()
+    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default='getting_started')
+    order = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['order', 'id']
+        verbose_name = 'FAQ'
+        verbose_name_plural = 'FAQs'
+
+    def __str__(self):
+        return self.question
+
+
+class ErrorCode(models.Model):
+    CATEGORY_CHOICES = [
+        ('client', 'Client Error (4xx)'),
+        ('server', 'Server Error (5xx)'),
+        ('application', 'Application Error (EXP-xxx)'),
+    ]
+
+    code = models.CharField(max_length=20, unique=True)
+    title = models.CharField(max_length=150)
+    description = models.TextField()
+    solution = models.TextField()
+    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default='client')
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['code']
+
+    def __str__(self):
+        return f"{self.code} - {self.title}"
+
+
+class SupportTicket(models.Model):
+    STATUS_CHOICES = [
+        ('open', 'Open'),
+        ('in_progress', 'In Progress'),
+        ('resolved', 'Resolved'),
+        ('closed', 'Closed'),
+    ]
+
+    PRIORITY_CHOICES = [
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+        ('urgent', 'Urgent'),
+    ]
+
+    ticket_id = models.CharField(max_length=30, unique=True, editable=False)
+    user = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='support_tickets')
+    name = models.CharField(max_length=100, blank=True, default='')
+    email = models.EmailField()
+    subject = models.CharField(max_length=200)
+    description = models.TextField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='open')
+    priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='medium')
+    source = models.CharField(max_length=50, default='ai_assistant')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def save(self, *args, **kwargs):
+        if not self.ticket_id:
+            # Generate clean human-readable ticket ID like TCK-84729
+            self.ticket_id = f"TCK-{uuid.uuid4().hex[:6].upper()}"
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"[{self.ticket_id}] {self.subject} ({self.status})"

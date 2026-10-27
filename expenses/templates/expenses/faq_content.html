@@ -1,0 +1,208 @@
+<div class="space-y-8 max-w-6xl mx-auto">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+            <div class="flex items-center gap-2 mb-1">
+                <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-100 text-indigo-700">Knowledge Base</span>
+                <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-700">SQL Backed</span>
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Help Center & Error Directory</h1>
+            <p class="text-sm text-slate-500 mt-1">
+                Explore {{ total_faqs }} frequently asked questions and {{ total_errors }} documented HTTP & application error codes.
+            </p>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <button onclick="window.openAssistantWithPrompt('Can you guide me through ExpenseFlow features?')"
+                class="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-bold text-xs rounded-xl shadow-md shadow-indigo-600/25 transition transform hover:-translate-y-0.5">
+                <i class="fa-solid fa-wand-magic-sparkles text-amber-300"></i>
+                <span>Ask AI Assistant</span>
+            </button>
+            <a href="{% url 'expenses:support_tickets' %}"
+                class="inline-flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs rounded-xl border border-slate-300 shadow-sm transition">
+                <i class="fa-solid fa-headset text-indigo-600"></i>
+                <span>Support Tickets</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-sm">
+        <form method="get" action="{% url 'expenses:faq' %}" class="flex flex-col sm:flex-row items-center gap-3">
+            <div class="relative flex-1 w-full">
+                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
+                    <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                </span>
+                <input type="text" name="q" value="{{ query }}" placeholder="Search FAQs, error codes (e.g. 404, budgets, CSV, EXP-4001)..."
+                    class="w-full pl-10 pr-4 py-2.5 text-xs sm:text-sm rounded-xl border border-slate-300 bg-slate-50/50 focus:bg-white text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition">
+            </div>
+            <div class="flex items-center gap-2 w-full sm:w-auto">
+                <button type="submit" class="w-full sm:w-auto px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-sm transition">
+                    Search
+                </button>
+                {% if query %}
+                <a href="{% url 'expenses:faq' %}" class="px-3.5 py-2.5 border border-slate-300 text-slate-600 hover:text-slate-900 rounded-xl text-xs font-semibold transition">
+                    Clear
+                </a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <!-- Section Navigation Tabs / Quick Jump -->
+    <div class="flex items-center gap-2 border-b border-slate-200 pb-3">
+        <a href="#faqs-section" class="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition">
+            <i class="fa-solid fa-circle-question mr-1.5"></i> FAQs ({{ total_faqs }})
+        </a>
+        <a href="#error-codes" class="px-4 py-2 rounded-xl text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 transition">
+            <i class="fa-solid fa-triangle-exclamation mr-1.5"></i> Error Codes Directory ({{ total_errors }})
+        </a>
+    </div>
+
+    <!-- FAQ Section -->
+    <section id="faqs-section" class="space-y-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+                    <i class="fa-solid fa-circle-question text-indigo-600"></i>
+                    Frequently Asked Questions
+                </h2>
+                <p class="text-xs text-slate-500 mt-0.5">Stored in PostgreSQL/SQLite database and answered automatically by the AI Assistant</p>
+            </div>
+        </div>
+
+        {% if faq_grouped %}
+            <div class="space-y-6">
+                {% for group in faq_grouped %}
+                <div class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm space-y-4">
+                    <h3 class="text-xs font-extrabold uppercase tracking-wider text-indigo-600 flex items-center gap-2 border-b border-slate-100 pb-3">
+                        <span class="w-2 h-2 rounded-full bg-indigo-600"></span>
+                        {{ group.name }}
+                    </h3>
+
+                    <div class="space-y-3">
+                        {% for faq in group.items %}
+                        <details class="group border border-slate-200/70 rounded-xl overflow-hidden transition-all duration-200">
+                            <summary class="flex items-center justify-between p-4 cursor-pointer bg-slate-50/50 hover:bg-slate-100/70 select-none font-bold text-slate-800 text-xs sm:text-sm">
+                                <span class="flex items-center gap-2.5">
+                                    <span class="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs shrink-0 font-extrabold">Q</span>
+                                    <span>{{ faq.question }}</span>
+                                </span>
+                                <i class="fa-solid fa-chevron-down text-slate-400 text-xs transition-transform duration-200 group-open:rotate-180"></i>
+                            </summary>
+                            <div class="p-4 bg-white border-t border-slate-100 text-xs sm:text-sm text-slate-600 leading-relaxed space-y-3">
+                                <p>{{ faq.answer }}</p>
+                                <div class="pt-2 flex items-center justify-between border-t border-slate-100 text-[11px]">
+                                    <span class="text-slate-400">Database ID: #FAQ-{{ faq.id }}</span>
+                                    <button type="button" onclick="window.openAssistantWithPrompt('Tell me more about: {{ faq.question|escapejs }}')"
+                                        class="text-indigo-600 hover:text-indigo-800 font-semibold flex items-center gap-1">
+                                        <span>Ask Assistant about this</span>
+                                        <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </details>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="p-12 text-center bg-white rounded-2xl border border-slate-200 text-slate-400 text-sm">
+                <i class="fa-solid fa-magnifying-glass text-3xl mb-2 text-slate-300"></i>
+                <p>No FAQs matched your search query "{{ query }}".</p>
+            </div>
+        {% endif %}
+    </section>
+
+    <!-- Error Codes Directory Section -->
+    <section id="error-codes" class="space-y-6 pt-6 border-t border-slate-200">
+        <div class="flex items-center justify-between">
+            <div>
+                <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+                    <i class="fa-solid fa-triangle-exclamation text-rose-600"></i>
+                    HTTP & Application Error Codes Directory
+                </h2>
+                <p class="text-xs text-slate-500 mt-0.5">Comprehensive troubleshooting guide for 8+ error codes with causes and exact resolutions</p>
+            </div>
+        </div>
+
+        {% if error_codes %}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {% for err in error_codes %}
+            <div class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm flex flex-col justify-between hover:shadow-md transition">
+                <div>
+                    <!-- Code & Title Header -->
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2.5">
+                            <span class="px-3 py-1 rounded-xl text-xs font-black font-mono
+                                {% if err.code == '500' or err.code == '503' %}bg-rose-100 text-rose-700 border border-rose-200
+                                {% elif err.code == '400' or err.code == '429' %}bg-amber-100 text-amber-700 border border-amber-200
+                                {% elif err.code|slice:':3' == 'EXP' %}bg-violet-100 text-violet-700 border border-violet-200
+                                {% else %}bg-sky-100 text-sky-700 border border-sky-200{% endif %}">
+                                {{ err.code }}
+                            </span>
+                            <h3 class="font-bold text-slate-900 text-sm sm:text-base">{{ err.title }}</h3>
+                        </div>
+                        <span class="text-[10px] uppercase tracking-wider font-extrabold text-slate-400">
+                            {{ err.get_category_display }}
+                        </span>
+                    </div>
+
+                    <!-- Description -->
+                    <div class="space-y-2 text-xs">
+                        <div>
+                            <span class="font-bold text-slate-700 uppercase tracking-wider text-[10px]">What it means:</span>
+                            <p class="text-slate-600 mt-0.5 leading-relaxed">{{ err.description }}</p>
+                        </div>
+
+                        <!-- Solution -->
+                        <div class="p-3 bg-emerald-50/70 border border-emerald-200/60 rounded-xl mt-3">
+                            <span class="font-bold text-emerald-800 uppercase tracking-wider text-[10px] flex items-center gap-1.5">
+                                <i class="fa-solid fa-lightbulb text-amber-500"></i>
+                                How to Resolve:
+                            </span>
+                            <p class="text-emerald-900 mt-0.5 leading-relaxed font-medium">{{ err.solution }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer Action -->
+                <div class="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between">
+                    <span class="text-[10px] text-slate-400 font-mono">Status: Documented</span>
+                    <button type="button" onclick="window.openAssistantWithPrompt('Explain Error {{ err.code }}: {{ err.title|escapejs }} and how to resolve it')"
+                        class="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1.5">
+                        <i class="fa-solid fa-robot"></i>
+                        <span>Explain with AI</span>
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="p-12 text-center bg-white rounded-2xl border border-slate-200 text-slate-400 text-sm">
+            <p>No error codes matched your search query "{{ query }}".</p>
+        </div>
+        {% endif %}
+    </section>
+
+    <!-- Support CTA Card -->
+    <div class="p-8 rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-6">
+        <div class="space-y-2 text-center md:text-left">
+            <h3 class="text-xl font-bold">Still have an unresolved error or question?</h3>
+            <p class="text-xs text-slate-300 max-w-xl leading-relaxed">
+                Our embedded AI Assistant is trained on all 12 FAQs and 8 error codes. If it cannot resolve your question, it will automatically file a support ticket in our SQL database.
+            </p>
+        </div>
+        <div class="flex items-center gap-3 shrink-0">
+            <button type="button" onclick="window.openAssistantWithPrompt('I need help with my account')"
+                class="px-5 py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-emerald-400 hover:from-indigo-600 hover:to-emerald-500 text-white text-xs font-bold shadow-lg transition">
+                <i class="fa-solid fa-comment-dots mr-1.5"></i> Chat with Assistant
+            </button>
+            <a href="{% url 'expenses:support_tickets' %}"
+                class="px-5 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold border border-white/20 transition">
+                Open Support Ticket
+            </a>
+        </div>
+    </div>
+</div>
